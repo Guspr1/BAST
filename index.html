@@ -218,11 +218,12 @@ table.barang tr.del-row td:last-child { padding:0; }
 /* ===== SIGNATURES ===== */
 .sig-section {
   display:flex; justify-content:space-between;
+  align-items:flex-start;
   margin-top:3mm; gap:8px;
 }
-.sig-block { flex:1; text-align:center; }
+.sig-block { flex:1; min-width:0; text-align:center; }
 .sig-label  { font-weight:bold; margin-bottom:.5mm; font-size:11pt; }
-.sig-company { font-size:11pt; margin-bottom:1mm; }
+.sig-company { font-size:9.5pt; margin-bottom:1mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .sig-canvas-wrap {
   position:relative;
@@ -232,6 +233,7 @@ table.barang tr.del-row td:last-child { padding:0; }
   width:100%; height:60px;
   cursor:crosshair;
   touch-action: none;
+  box-sizing:border-box;
 }
 .sig-canvas-wrap canvas {
   position:absolute; top:0; left:0; width:100%; height:100%;
@@ -847,7 +849,7 @@ function loadData() {
 
 // Auto-load on start
 window.addEventListener('load', () => {
-  [0,1,2].forEach(i => initSmallPad(i));
+  setTimeout(() => { [0,1,2].forEach(i => initSmallPad(i)); }, 100);
   const raw = localStorage.getItem('bast_data');
   if (raw) {
     if (confirm('Ditemukan data tersimpan. Muat otomatis?')) loadData();

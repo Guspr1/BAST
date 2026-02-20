@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BAST - PT Sunvone</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5pt;
+  background: #d0d0d0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+}
+
+/* ===== TOP TOOLBAR ===== */
+.toolbar {
+  width: 210mm;
+  max-width: 100%;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.btn {
+  padding: 7px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: opacity .15s;
+}
+.btn:hover { opacity: .82; }
+.btn-pdf    { background: #1a5276; color: #fff; }
+.btn-save   { background: #1e8449; color: #fff; }
+.btn-load   { background: #784212; color: #fff; }
+.btn-reset  { background: #922b21; color: #fff; }
+.toolbar-sep { flex: 1; }
+.draft-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-family: Arial, sans-serif; color: #333;
+  cursor: pointer; user-select: none;
+}
+.draft-toggle input { cursor: pointer; width:15px; height:15px; }
+
+/* ===== VALIDATION ===== */
+.invalid { outline: 2px solid #e74c3c !important; background: #fef5f5 !important; }
+.field-hint { font-size: 9px; color: #e74c3c; display:none; }
+.show-hint { display:inline; }
+
+/* ===== PAGE ===== */
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  background: white;
+  padding: 8mm 14mm 7mm 14mm;
+  box-shadow: 0 4px 20px rgba(0,0,0,.25);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ===== DRAFT WATERMARK ===== */
+.watermark {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%) rotate(-35deg);
+  font-size: 90pt;
+  font-family: Arial Black, sans-serif;
+  color: rgba(200,0,0,.07);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 0;
+  letter-spacing: 8px;
+}
+.page > *:not(.watermark) { position: relative; z-index: 1; }
+
+/* ===== HEADER ===== */
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5mm;
+  border-bottom: 3px double #000;
+  padding-bottom: 1.5mm;
+}
+.header img { height: 46px; }
+
+.title {
+  text-align: center;
+  font-weight: bold;
+  font-size: 13pt;
+  margin: 2mm 0 2mm 0;
+  text-decoration: underline;
+}
+
+/* ===== DATE LINE ===== */
+.date-line { margin-bottom: 2mm; line-height: 1.7; }
+.date-line input, .inp-inline {
+  border: none;
+  border-bottom: 1px solid #000;
+  outline: none;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5pt;
+  background: transparent;
+  text-align: center;
+  padding: 0 2px;
+}
+input[type="date"] {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11pt;
+  border: none;
+  border-bottom: 1px solid #000;
+  outline: none;
+  background: transparent;
+  cursor: pointer;
+  color: #000;
+}
+.inp-hari { width: 75px; }
+.inp-tgl  { width: 30px; }
+.inp-bln  { width: 75px; }
+.inp-thn  { width: 30px; }
+
+/* ===== PARTIES ===== */
+.party { margin-bottom: 1.5mm; }
+.party table { border-collapse: collapse; }
+.party table td { padding: 0 0; vertical-align: top; line-height: 1.55; }
+.party table td:first-child { width: 115px; white-space: nowrap; }
+.party table td:nth-child(2) { width: 14px; text-align: center; }
+.party table input[type="text"] {
+  border: none; border-bottom: 1px solid #555;
+  outline: none;
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5pt;
+  background: transparent;
+  width: 290px;
+}
+.party-title { font-weight: bold; margin: 1mm 0 1mm 0; }
+
+/* ===== SECTIONS ===== */
+.section { margin-bottom: 2mm; line-height: 1.5; }
+.section p { text-align: justify; }
+
+/* ===== SERVICES ===== */
+.service-options {
+  display: flex; align-items: center;
+  flex-wrap: wrap; gap: 5px;
+  margin: 1mm 0;
+}
+.service-options label {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 11.5pt; cursor: pointer;
+}
+.service-options input[type="checkbox"] {
+  width:13px; height:13px; cursor:pointer; accent-color:#000;
+}
+.inp-mbps {
+  width: 38px !important;
+  border: none !important; border-bottom: 1px solid #000 !important;
+  outline: none; font-family: 'Times New Roman', Times, serif;
+  font-size: 11.5pt; background: transparent; text-align: center;
+}
+.coret-note { font-size: 8.5pt; font-style: italic; margin-bottom: 1mm; }
+
+/* ===== LOCATION LINE ===== */
+.location-line {
+  display: flex; align-items: center;
+  gap: 5px; flex-wrap: wrap;
+  margin-top: 1mm; margin-bottom: 1mm;
+}
+.location-line input[type="text"] {
+  border:none; border-bottom:1px solid #000;
+  outline:none;
+  font-family:'Times New Roman',Times,serif;
+  font-size:11.5pt; background:transparent;
+  flex:1; min-width:80px;
+}
+.inp-bln2 { width:65px !important; flex:none !important; }
+.inp-thn2 { width:30px !important; flex:none !important; }
+.inp-tgl2 { width:30px !important; flex:none !important; }
+
+/* ===== DAFTAR BARANG ===== */
+.table-title { text-align:center; font-weight:bold; text-decoration:underline; margin:2mm 0 1mm 0; }
+table.barang { width:100%; border-collapse:collapse; margin-bottom:2mm; }
+table.barang th, table.barang td {
+  border:1px solid #000;
+  padding:2px 4px; text-align:center; font-size:10.5pt;
+}
+table.barang th { font-weight:bold; background:#f0f0f0; }
+table.barang td input[type="text"] {
+  border:none; outline:none; width:100%;
+  font-family:'Times New Roman',Times,serif;
+  font-size:10.5pt; background:transparent; text-align:center;
+}
+table.barang tr.del-row td:last-child { padding:0; }
+.del-btn {
+  background:none; border:none; cursor:pointer;
+  color:#c0392b; font-size:14px; padding:0 4px; line-height:1;
+}
+.add-row-btn {
+  font-size:11px; padding:3px 10px;
+  background:#1a5276; color:white;
+  border:none; border-radius:3px;
+  cursor:pointer; margin-bottom:2mm;
+  font-family:Arial,sans-serif;
+}
+.add-row-btn:hover { opacity:.8; }
+
+/* ===== SIGNATURES ===== */
+.sig-section {
+  display:flex; justify-content:space-between;
+  margin-top:3mm; gap:8px;
+}
+.sig-block { flex:1; text-align:center; }
+.sig-label  { font-weight:bold; margin-bottom:.5mm; font-size:11pt; }
+.sig-company { font-size:11pt; margin-bottom:1mm; }
+
+.sig-canvas-wrap {
+  position:relative;
+  border:1px dashed #aaa;
+  margin:0 auto 1mm auto;
+  background:#fafafa;
+  width:100%; height:60px;
+  cursor:crosshair;
+  touch-action: none;
+}
+.sig-canvas-wrap canvas {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+}
+.sig-placeholder {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  color:#ccc; font-size:9pt; font-style:italic;
+  pointer-events:none; white-space:nowrap;
+}
+.sig-btns { display:flex; gap:4px; justify-content:center; margin-bottom:1mm; }
+.sig-btn {
+  font-size:10px; padding:2px 7px;
+  border:none; border-radius:2px;
+  cursor:pointer; font-family:Arial,sans-serif;
+}
+.btn-clear { background:#c0392b; color:white; }
+.btn-undo  { background:#7f8c8d; color:white; }
+
+.sig-name-input {
+  border:none; border-bottom:1px solid #000;
+  outline:none; text-align:center;
+  font-family:'Times New Roman',Times,serif;
+  font-size:11pt; background:transparent;
+  width:90%; margin-top:1mm;
+}
+
+/* ===== ZOOM MODAL for signature ===== */
+.sig-modal-bg {
+  display:none;
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.65);
+  z-index:1000;
+  justify-content:center;
+  align-items:center;
+}
+.sig-modal-bg.open { display:flex; }
+.sig-modal {
+  background:#fff;
+  border-radius:10px;
+  padding:16px;
+  width: min(95vw, 500px);
+  box-shadow: 0 10px 40px rgba(0,0,0,.4);
+}
+.sig-modal h3 {
+  font-family: Arial, sans-serif;
+  font-size: 14px; margin-bottom: 10px;
+  color: #1a5276;
+}
+.sig-modal-canvas-wrap {
+  position:relative;
+  border:2px dashed #aaa;
+  background:#fafafa;
+  width:100%; height:200px;
+  cursor:crosshair; touch-action:none;
+  border-radius:6px; overflow:hidden;
+}
+.sig-modal-canvas-wrap canvas {
+  position:absolute; top:0; left:0; width:100%; height:100%;
+}
+.sig-modal-placeholder {
+  position:absolute; top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  color:#ccc; font-size:12pt; font-style:italic;
+  pointer-events:none;
+}
+.sig-modal-actions {
+  display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;
+}
+.sig-modal-actions button {
+  padding:7px 16px; border:none; border-radius:5px;
+  cursor:pointer; font-size:13px; font-family:Arial,sans-serif; font-weight:600;
+}
+.btn-modal-ok     { background:#1a5276; color:white; }
+.btn-modal-undo   { background:#7f8c8d; color:white; }
+.btn-modal-clear  { background:#c0392b; color:white; }
+.btn-modal-cancel { background:#eee; color:#333; }
+
+/* ===== PRINT ===== */
+@media print {
+  body { background:white; padding:0; }
+  .toolbar { display:none; }
+  .add-row-btn { display:none; }
+  .sig-btns, .del-btn { display:none; }
+  .page { box-shadow:none; width:100%; padding:8mm 14mm 7mm 14mm; }
+  .sig-canvas-wrap { border:none !important; background:white !important; }
+  .watermark.hidden { display:none; }
+  input, .sig-name-input { border-bottom:1px solid #000 !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <button class="btn btn-pdf"   onclick="exportPDF()">📄 Export PDF</button>
+  <button class="btn btn-save"  onclick="saveData()">💾 Simpan</button>
+  <button class="btn btn-load"  onclick="loadData()">📂 Muat Data</button>
+  <button class="btn btn-reset" onclick="resetAll()">🔄 Reset</button>
+  <span class="toolbar-sep"></span>
+  <label class="draft-toggle">
+    <input type="checkbox" id="draftCheck" checked onchange="toggleDraft(this)">
+    Watermark DRAFT
+  </label>
+</div>
+
+<!-- PAGE -->
+<div class="page" id="bast-page">
+  <div class="watermark" id="watermark">DRAFT</div>
+
+  <!-- HEADER -->
+  <div class="header">
+    <img id="logo" src="data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABwAVIDASIAAhEBAxEB/8QAHQAAAQQDAQEAAAAAAAAAAAAAAAEDBQcCBggECf/EAEwQAAEDAwMCBAMFBAQIDgMAAAECAwQABREGEiEHMQgTQVEUImEVMnGBkRYjobEXJEJSNHJzkqKyweEYJSczNkNTYmNkdIKU0aPw8f/EABsBAQEBAAMBAQAAAAAAAAAAAAABAgMEBQYH/8QAMBEAAgIBAwIDBgYDAQAAAAAAAAECEQMEEiExUQUTQQZhccHR8BQiI4GRsRVCoeH/2gAMAwEAAhEDEQA/AOy6Qk5paxPeo3QEKiCkc8msFOYSCHBgZyaxkvIZaW46tLbSEkqWo4AHv/OuP+v/AF4ud7lydPaOlrhWhlwsuzGj+8kY4OPZJ9CPY1zYsMszpGZzUEX9rTrRofSy1sS7umVLQCSxGTuIx6E1oz/iXguEJgaXmuZPyqceSlJH6Vz30n0HeteX5UC1+Y0yle6VNdUVeSPcK/tE+1dWaa6SaB0XbPiJraJa0DLsmcsFI+uDwK7zjpcCrKnZ5M5a7POsCr4kTbPELbXCPtLTt3hoPdwIDiR+gqxtIa901qlpJtN1bccV/wBS4Njg/I1o0vq90ts7iosdxmSRyr4ZjKT+orzQ9fdINSSUqKmLfMJ+RxTZZcSr8cYrzp6jTzdQPYweGa6Ebypl0BS95+bj8KzyT61F2N6Ou3sliaJjWMJeCwrI/EVJg/TFY69CtSTqSoyzRmkPbNIVYHbH1NQC5NLk+9Y7uM4I/KjJ9qvJLRlz70c+9YblcfL+PNLk4zjA+tOS2Zc+9GT71iCfXH1oyfpn6e9TqDLP1oz9awKiDggDjjPqfajdgZIwPWrwwZ5NHPvWO76fn70m5XzDbkj+dLb4FmfPvRz71hv7DHP8qVCipIJGKcsWZDNYlRz3pFLIIwOPXPpSbvm7DH8aJ2LQ4DxRmsCogYCDmjdgHI7DPvUYM80mTSEqHcD/AHUm45I21VQM8n3pATWIUSspwKXODjH4fWiafQVRlmgk1iCTzwKM57flTqBcmlzWAJIJCTS5OPumpwOEZc+9Jk570mT7UZO4jHOPXtRJizMUUCitECiiigCiiigCm3TgE/TNOU24CSQTwojFBVlAeMTXrti0nH0rbXlNzLtzJKRhSY44IB9CSR+lchTULbWy02Mu4CEY7cnAqz/E/cF3jrbdv3ilNxEIjoB7DGCf51oM1stJi3JKdyIrjanBj0C693SYGsO6PU8vU6vy8yizu7ovpOJorpzbLc22gPLjpfkuY5UpQ3HJ9cVzL116gXDWGqJNvakuMWiI8WktBR2uYOCTjvyK66sclq76VhSojoU1KhJKVJ5ACmwOMexrh/X+m52ldWTIFyYUzl4qjvKB2Oevft618v4hLI5VZ9p7NYseXNcn/JER2ztASgAegPBFetTSVIAfbDh9CfT8KWEdxSRhf+LzXtXsKSMYJ7Cvn5yaZ+o4dJCUOaaNk6b6+u+hri263IelWcqHxEVRzgepHtXYem7vDvNmi3KC55keQgLQfx9DXBa1FDiQSNpVhQ/vA+9dH+ES8uP6audieWpYgOhTWecJUM4r09BnluUT4f2q8Mxwx+bjVF8FWMZ9s1TniN6vO9O4sS3WqOiRd5iSpPmfdQn3/wB1XECMFR7DkfSuMPGrGkN9VIz7hUtt2Bhk9tqvpXvaaEcmTk+DlKokVburfWzUC3H7PJuM5O4/4LGBQ39CcV7v278RBWMsXgE/3YwP+yt+8OPVfp7p7pvb7NdJjVsuMZR+I3MkF4+5OPr/AAq1oHWfpnOdLLeqoaVH1USnH612ZycG1t4EKNP6Saj1/I6P6lvGrvi2LpGDhYU62EkAJ4OMVTXTLrp1Ee1zZYk+7Nz4k2Uhh1C0BJSgkjP411br6VGmdM75LhvIfZXb1qSttQUlXy9+PpiuA+mIH9Imm1lWc3Fr/WNMEFkjKTJJ0+D6TgKBI75z/uqivFh1G1Foa32WJp91uM9PWovPEZICfar35CuO1cr+PLHn6WP+Wrq6aKlkSNS6GxdA9faq1F0g1he7tcDJmW8u/DO7cFJCCoHH6VR0Pr91PiyEyDfkyS3keW62AFc9u1WX4Xfm6Ba/HbKnh/8AiNUV030rK1pf3rPAeSiZ8M68zuTkEoBIH54rvwxwudrocW5nb/RTqFE6haMRdGU+TOaX5E5rOdjg7qH0qu/Fl1I1Voy4Wa36elpjCQ2p1xwpySQRVDdB9dSum/UP+shxFvfX8JcmD/ZIPB+hHcn2qwvG88iTftMymXA407EUtChyFAkYwa4Y4Ky+43u/LZY2jNTaxv8A4YH9Ts3cm/obedTI2dwlQJGPwBquPD71w1fcuodssWprg3NgXM+XlSdqm3CDt/Lg1bPhWipmeHyFDcSCl8SGsfRXFcfOedo/qXv+6u03hJ7c7Q4c/wADVjBTcolvofSE7iAkH5jkZx25rnHxSdX9Q6Qv8XTml30RXy2HpUg4UfYAA9u1dFQHkTYbMptWEPNpcTj2UAquAevV2VqXrHfH2U7kmYIbYznGMI4/MGuDSY05PcTI6R0T0/6k3ux9BZfUDWMx64SFvLTEbKQN+ThIwPqDVK3Dr51Tv92S3aJYbWvJREhs7yE+masjxJ2tWn/DhpqxglKmnWQspHO4JyT+pNad4LGmneqsxxbYUtMBRSSAeQcV2IKO2Umg30R5Hdf+IFtoOrTc0IIwf6qMgD34rLRviL1/ZrwlGoVIucPzAJLa0bHW/f8A/ldqlKT8pztJIIPOa4B8SMZiF1s1JHjNJabLqHClPqSnmmmljztxokrTOlfEP1Au1q6RWrVmk55jKnSGlBe0ElpSckc+oqjNJ+IzXtouiHrvMTdIJIC2VoCVJGeSMdz9K2nqoc+EDRm4nIdYSDnOeDVP2TRc+69NLhrKCtTv2bLDchsDPyEE7vyxXJhxQeJti3uPoBpq9Qb/AGSHeLW+h+FLaQ6ypJzkH7w/KuV+tPWTXtq6tz7HaLk1Fgw5bbCUBOdwURnNevwZdRBBmOaDubhDDyy5bSpQIaWfvNg+oPeqy68kDrxeh2IuTW4Y7nIrrwxVJ2b3F7+KLqFqzSUPTf7PzxFdlsbn1kdzhPp+dVBZuq3W2+F37EnTrghpQStTDAUE5/Kt28af+B6PPvGP+qmm/B/rbTGk7JfmdQ3hiCtx9stB0k7gc5rlx7Y4t222Ybt0a4NdeIcZPlXkg8cRh/8AVdM9ALnqi69OIkzV6XxdFPOJX5yNqincQOPwr22XqXoS9XNu12rUUWTMfUUobazk4/KtwG7eON204Bz6Yrq5pt+htDzecY9sfyrKsWxhIHI/Gsq4EaCiiigCiiigCsFnBz7VnTbnJwR69/yqN0DhDxBW56F1s1E06jah99Mhv6pUkY/iDWu2QpStTbyAplaSFgjOB2zirx8ZWlVtz4GtYyVbFM/CSsD7uD8pP6mqLtjgbKQrggd/U/UV9h4TKGTDtZ8Z4+8kMm6JdvRDqW1oiMNNX55xdh3bYcg8ljdztP0zmr+lw9J62tjapDdvubBTlo8Ej+Oa4yEplcbylpyjGEk+lQ6pcy2SS9aJr0Ff95lwoP6iuLxDwXFk/NHg4/CvaLNjkouzqy7dAdGyyVRUyISinjYviqz170T1BYYrkyzSRc4iAf3eP3iQP51Xln6y9SbG6lxnUDk1oHPlSQXE4/E10P0F6zxuoq3LLeIaIN9ZaKtqT+7fRnGU/X6V8rrfCNis/SPC/aXVwqSlx2OWJC1J3IcBSoKKFJUMELHpXQfg0aWsX6UEkNqU2kq/7w9K0LxP6ei2HqE3LgNhlm4N+fsIwkOdsAe9X54b9LL0105iiQ2USpx+JeSruM9hXlaXBty/A+k8Z8T/ABGiT9WWYc7QO5xyPetO6odOdOdQbUiBfWFFTRyw81w42fxrclHCv93eqZ8RHV+4dMpVsjQbVEmCZncXlkYwM17GOE3OonxTqjUHvCbZluq2aqmJQT8qVNglI/Gqz699Ef6N7LEvLF0Tcob8lEdbTjYSrJBIOfyrZj4stQhOBpy1DH/jKqv+rHV/UHVFuJbZkBliLGVv+Fjbll1forPuPSvSxQzQlcmqONtVSLD8NN7myulevLHJefcjQ4ZcZ3qyU7twIH04Aqk+my89QNOEgD/jBrt/jV034W+nNwt/Te/yLw0uI/e2Sw226MKQjb8pOfcqrmS/2G/6E1WiNPjSo0u3v+Yw+WyW1FKjg5+tWEoOcoxMUfSRxX7wYG7PCufu/WuWPHgpJkaUAOCfOGPp71CRfFVqZuM025YLbIewUrWHCncR2z+Jqt+qfUe/dVL9BkybchIislpiNFQVnf3OT6c8V1sGFwyW2b3XwXF4XAT0D19j1W6f1aJqv/CIR/TLEKTgGM4P9E1cvRTRt10h4eNT/a7ZYlXRh+SlonlALZAH0qn/AAgNLc6yRltNKU20wveUpO1J2n1rkWWNT942myeMbpoq1Xwa4tMQm3z1BFwS3x5bp4C/wPrVNal1VcdQWO0Wy4uF1yzoU004T95BIKcfkDX0Q1VY7fqOwTLJdG0uRJTRZUkpzgn1/EV8+epujLloTVUmyXBlSI7a9sd8pO1bXocj1rekzKUal1Myg30Ov/CKr/kLtO1XPmuY/wA4Zrm3xY2P7I6vXJxDRS1cGhIaUBwVHv8AyrpDwh4/oKs+3BSXHcbT2G6tU8ZWhrje7VbtS2iM5JdgEiQhAyfLyB/tNdbHPblZuUXSN86aarbc8P0DUjjhWYlqV5hz2W2CkD+Vcg9G7UrVnWizR1hTokT1Sn89tgJWVfqaytXVLUdq6ay+nbEdswJClYWoKD4Clcpx+VXB4MNB3OPe5etLrDXGZTHMaEhaMEgnuM/QVzOKwqTu7M1uSRtnjZx/RjAQkc/Hpx9MD/8ARVYeCTA6pzsEZ+z1fzq+fFBpCdrHpVJi2pG6bFWJDSAOVY7gfjXHWgNYXzppq83iLB8iRgsPR5LZSFCmGpYHH1Ek00z6LgjeBjuM964E8T5UeuepCnBytkD3+6M1vTniu1L8OQNN25KwnaHPMPB98VT8g6k6j61lSm4jsu5XJwuHyUHCABj71Z0WLyJNyEndF19Udp8I2iwBgCQyB/Gth8EkSNM0JqOFLbS9HelJS42oZCgQRTfiRso0v4cdNWV1fzRJDCF5HIO3nge1e3wKgp0Ve1rbWELmJLZUk/NwRmpLJ+k0u5pr8yRRnWPRdz6X9TFNwS43FLqplskp4wnvtz754rW9Uaie1RrYXt8BD8t9lx0Ed8bR+veu3uvvTyN1B0NIhJCWrnFy7Ae9ULA7fgRmuDXI0q23xm33GMuNJaloQsLQRlQVjIz6VzYskZQafU45JpnQ3jUGYejv/TK/1UVpXQTo9B6m266TJd1dg/BPJbA2A9xnNbl41VJFv0gVKwBGI3ZBHKUVXPRvrBcumcO4xbfaYk4TXUrJdcKdu1OKuNyjhqJr1s6B6eeHG2aO1rbdTsX959cBZX5ezG/IxV9t5B5rj/8A4WWoSoJ/Zq3nPzEJeUfTtXQvQ7WcvX2g4+o5kVMV11xaS2g8YBro545FyzUWb/RSI7evelrro2FFFFUBRRRQBWLgyCMnkYrKkNAQmqbHB1FYpdnubIdjSGihWRnbxwofUVw71N0Neunt6XEuLDjlvWsmFM/srR7KPoa77IxzmojUtgtuoLY5bbxFZlxHBhaVpyc+hHsa7ek1csLOlrdFDUR5PnwZignCTuBGRg8AfQ1533ysZOMfjXRWt/DK5uVI0fdwEEkiLK7J+gIqsrh0D6px3VNIsrEpOeFtvpA/ia93/KRlHqeLj8DUJWkVhLdBUEDG4j0OcCrR8Itql3Dq/HmR8iLb463ZDg+5yMJBPvnjFS2lvDLrq4ym1XybDtUTd+8CDuXt+mK6e6Z9PNPaB04bLZmNyHMF95Y+d1XqSa83W6yM40j3tPh8tJGlXTSSeovVhF+uMZS7DZUeXFbWNvxD3qfqkVcMdoNI2jGB93AwAPQflQ0w2gJCUpAScpAGAPwp4o4ATwBXjQirs7+XK8tRfRCY5z61G3fT9kvKmzd7VEnFv7hfbCiKlAkg0uKv+1nD1NbGg9GZyNL2r/4ya9ELSmmoS0mJYbawUnckojpBB9+1TlGK1um3wyJIbLYKQk5IHH414rjZ7ZcW9lxgR5gIx++bCjUjigjipbvgrSNZ/YDRSsk6XtXPJ/q4r2W/Smm7coKgWK3sK90MJBqao59KrlPuKQw8wy80tl5oONrRsUhQyCn2xXgsmnrFYwv7ItESDv8AvFloJJqWoGazG65KYEZyQO4rwXayWi7ISi6WyLNCe3nNBWP1qS5zxjFFatroLPDarZAtcRMK2xGYcZH3W2U7Uj8q9SkJyQU5Sruk8g/lTlFZ5bBBOaS0w7N+Nc0/blSf+0MdOamG2kNJCG0hCEjCUpGAPwFO0YquUnwyUjFIxgfTFRNx0zp65Obp9jt8g+62Ek1MYoxRbl0ZXRrP7B6Mzn9lrXn/ACCak7bZLPbBi3WyHE4x+6ZCSPzqTxSY/Crul6slIjrrZrVdoojXWAxOYSoLCHkbgFD1p23WyBbYoi26GxDYHZDKAkfwr24/CiitF943t5JGcn1qKuWl9OXOWmVcLHAkvpOQ44yCoY+tTNFZW4WmRd0sNmu7aGbra4k1tv8A5tLzQVt+g/So8aD0WAR+zFr5/wDLitkxRzVua4slI1k6C0YT/wBF7V3yP6uKmbRardaYiIlshtRI6CSlppOEgnvxXtpcVXKb9SJAntS0AYoqLoUKKKKoCiiigCkNLSEgdzQABSKHHrShST2IoPap1A2W0k5Kcn6VmEgDAFAIPIOR9KyzUqvUDe3gZTz9KyAOOcfpWWRRWviBAKCKWigExRilooBMUYpaMj3oBMUYpciigExRijI9xS0AmKMUtFAJijFLke9BIHegExRilBBGQQaKATFGKWjI96ATFGKWigExRilyPeigExRilooBMUYpSQO5pNw96AMUYpaKATFKKCQO5xRkUAUUgIPYg0tAFFFFAFFFFAFRN+gm5wpVv+KlxfOSB50Vzy3W+xylXvUtTD2QpRB/0c0F007qigNOPvacuOsLzftZannQtL3EMMxnJ5UHkqSjCVgjBypwfhjPpW12nX0i/Rb9Yrm1aWp4tD0qOu23ASmlI2KTtUeClaeMjGOeCak1dN2JMbV8O4zEvMakmiUNqNpYISjaOe+CgH8yKXS+iZ1rt1xh3CRYC5JiuRmXIFqEdQCklO5eD83fJxiuuoyUqPYz5tJK5Xzx/S+dmtaW1qNMdJ9EQmRFeuNztwEYzZQYjgtpTvK3FcpzuGAASam4vVKNI0em6NQ0OXH7QTahFYeStsyj93asHBbIwc+x9+K883papekNMW1ufbnrtp+L5DD0uF58Z3cAFFbROcfLxzke9S8zQPx2kmbQ7IgRbhGkomsPwooaaQ+j7qtn+wmrtyLoTLk0eSe9vltt/wAv5CXbV17tkK3W92wxnNT3JTqI8ZMpRjbkJClLKyN3l4PcJJ+lQ126qzbdYbi7L08r7WtV0iQJsNDoUlwSCn5mlevCuN2Oe+KmLzpG/wBxYtdwVfIydSWx1bsaT8KRHBWkJWgozu2cf3s/Wo2d0zlztPzG5N7ZN2uNyh3CbM+GKW1FgghKUZyBgYGSfrmpWWzEPwyjc+v79/oDHUDU5vl2sKtIt/acGIicyPjP3T0dRAxuIyHATjGCPrQjqdOuszTkSwaeEtd9s7txaU+95YjrSoJAcwD8hzglOTn0rYP2PdVrq4akXNHlyrOLamPs5QQsK35z2qI0Z08k2S4aYnuXiPIFks7ttVsYKQ8VrCgsHccdsY5q1kv77/QOekfKXP79vqRtr6sXGTZ4l5k6XW1EFz+ypu18KW1ILgbygeqNyhycHntUlL6hSWLNraem2NKXpmU6whAdO2QEICgVcfIST6Z7U2OmspOk5FnF2Y8x/UP2wXvIUEhPnocLe3dkkhBTuzxnOK8+oemdzujuqY9s1QmDa9RhTr7Pw+9xmRgAqSrttIABSQT7EVP1Uvvt9TkX4GU3fS/f3XysyldRb9Ivr1ns+mW5kluyRrslapmxH70KKmicZH3flIBBPfFMR9T2/U2qOnt0Rb30LnRprqMyyj4ZbZbStKkAEOckjJPGOM5qcs+ipNt1Q/dzcWHku2SNbEtiOUlBaCwpwnPIO4fL6YqM0x01lWR7R7n2rHfGnmpqHAlkp+I+JcCxtyfl27ec5z9KNZWzG7SRjw6f79n86JbTGrbhqKc9OhWcLsKHHWGJSX8PuuNqUkq8s8BGUkA5z9Kgrh1Eu711l2JFvtjVxkQpDsBDdxCy0ptAJEkIyWzknBGeRUvZNCzrU1cLS1fAmwyg6ptltopfacdKis+Zn7mVZAAznPNRNh6XSLfdrJNlTLa4bREkRV/DQi05LbcQlCS45klSwE5JPBzwBV/VaMx/C7m7vsVVbdZarPQC0XnVUaPf7S5cG2nJP2m83cHVF9SUlSdm3AIxjdyAKui+63vSb7cIGnbEzdE2coVdHHZHlYCkhe1kAHcsA9lbR9a1eb0duDvTNWgo2oILNrZuTMu3OmGsutpS6XFIcVvwrOcJIAwBzmtoveibmdR3O46dvTNubvISLo04yXVKCU7NzJBGxeBjJyPpWYrNRzSnppuve/l/6eD+kyfcbtZYGnLAiX9t2I3Vhcl8oDJ34CXdoPyY9U5OfStn6daqOqtMC9Owlw3UPOR5EdSt3lOtq2qA/P8AhUXZdBM2rU9ln2+chEG1WQ25EbYStwb8he7PA9CKlOnml3tL2SXb3Z6Ji5FxkzvNS2UgB5ZVtxk9s1tRyPq/vg6+Z6Ty0sa54793f/KKk6XdS9QRtCWSXc25OoJt41LMgb3XglTQBUUgehSNuMe2anNZ651JL6e61gJtzVqv9kQWpXlyVLSlpxCil5peMkkA4BA7V6tJdH5VisOnbaq+xpC7PfZF2UsRiA6l1KwGwN3ykbu/07VL3vpzKuI1xi7st/tQy2wjLJPw+xCknPPzZ3emO1Z25NtWcnmadZFJej+ZrbOrr7ovTekLFZtFNXG43S1OSG4UGTtQl1GzuV4yFBZUSeQRxnNbBrDqPO047EVcLVCYjqLSJKF3BIllSyhOWWx94BSyMnB+U8VLL0c5+1Olbubi2n7BtzkFTJQf3+8NgKBzxjyz+ta5qvpbKu0i8p+0bd5dyltzGnJEIuSo60rbKkIczwghsYAAIJPJzVUchVPSTnFzXe/jb+RP2rW8i4a5mabhQoqWIK1Muee/skrVtSrzENEfM182CrPf0Ppoumdc6vs9h6hX28xI81mz3FxTLKpilLThLQDKcpwlGFbhgnlRHbmt6u+iZVz1pbb5LnxPhra8iSwpuKUzVKSkjy1vZwWjuzsx6d6irn04mS7RrG1xbzGYiahdMhIcjla4zx8vOVBQBThA4wCM960lk7mFl00YtV1r+b5Cx9QtRyb7Y4N40kq0M3iW+zH8+SFOFhtpC0u7U5G5SlqBGeNo55rI9S1x1agD9rC3bdd2bRDabdJMh11IUnJIwnlWPyqU1loudd/2fmWm7NW+7WJ0qjPrZK21JUlKXEKTnJCtvoRioRjpbIRFvjcnUK3pU+8N3iJJU0AY76EJA3AcKAIPHBxjnPNR+auDSWkcG3Sb9Oe/0PB1L1Br+Gzo9xiFEhTZN6YYkIZmLDLpJGG923Kmz2OQD7A1tUXW0x3UOqLPKt0ds2OCw/vS+r96pxveoEEcJB4B7/SmtQ6Pvl5slsEu/wAdV4t09mew98Ofhi63ghJRndsOP72c+tea6aCusvVdyu8HUQgpu8JEa7Noj7llSEbUONEnCTj0UFDH15oo5OtklLTzjGPHHa+/0IF/q5fpEWwps+iTdrjebKu5NxmZQSG3ErCQlSlYGzn73fOOK9F56vJhXCTsi2v7Otz6Y1wU9cUIlpcJCVqaaP30IKuSSMgHGakdGdNn7FO02+bvHkIs9hctak+SoF8lYUHB83A47cn60L6bKY1ZJuVucsJhzZJlyWLha0vvhw/e2OZGEn2OcVWsiIpaNcV939BfEFf7pZujN7vNkmvRJSY7So8hogLTuWgZA9Mg/wAa1TSGqLhbritFr1DN1LbY9hduE5Up4veTKCEqS15498L+X0xzVkdV9Hr1x0+uWlGpqIC5qW0CR5e4I2rSrt/7cV6V6ViMaLl6bt7caEH7euMp1mOEJ3qa2FagMZ9/fjvWXHI5XZjDqMEMKi1y2zR7V1VvM2xsXiVox22puSo7FlS9JH9dfcQtSyQnOxCdgwo8nPavRP6l3m12y/N3TT0ZF7scePKksMylrZWw64UbkL27jtCSTkD9Kl5mglv6EsNiNybRcLGGXYk1DJ2B9tKk7iknlJCvu5/OnLRoh1CbtOv89q4Xe8w/hJTjLRbaS0AoBLaCSRjfnkmm3J3NqWk23Xq/7Vf8s1vqrrWNItWo7QxD+Kt0axNz3n2ZimFHzHMIbQtAO3IG7cOcEcc1OXDV0yNKg6csNpRLkIt6JckPvFvymCCnakgEqcyDwQB7kVBWDpBMtvTS+6WkaiE6bdUJa+PVHxtbQEIaSUg/2UtgcEe9T100Jcl6li36zXxuNKEJECalxkrS8wlSjlPOUuZUeSSPpWmm0aT0m/Zu4XxNF6Z61Gn+m9uYDLKbndLtcAwi4ywyy1tfWpRdcyduM+meeBmtildWXE6HdvrVrZnTot1YtkuFGlBbRU4sJy04OFgg7k5x3wcVjH6QfD6Xg28XePLuVsmSZUeRNhpdaX57ilFLjXYjBxxjtkYqWu+gJVw0XGszk60w5LNwjTHXIUHymP3TgWUhAPGQMZJNYj5i4GbJppy3xdt/f9GyaBul6u1qbnX+xuWOY446kQ1PBwhsK+RaiONyhg/TtWz15Y4V5qQDhIHbHP5mvVXY59Ty5VbpUFFFFCBTamgpe44/zacooBssjBAURuOTj1oLQI5wfTt3pyigGBHAXvJyR247e9Zloc8nB9DyKcooPWxos99qsEjGcc0vlA5yTzjOO5pyihKGvITjHGDnIxwc0JZ24ws8fqadooK5sbLKSMYHPfjv71g3HSg8KURxwfYdqfooGrG/JG3aVKIzk5pAwnnnk9/rTtFWxQ0WeAAogdiPcUgjoCgpPBAwCRn8KeoqWKQwYrZA7gjPI4798e2aVEdKUbMgD2AxT1FA1YyqOknJOed3I9ayDYBznn8KcooX0oaLIPG5WOOKXyhkHP48dz705RQiSQ2pkKUDuVx6Z4NIlgAcqOc+nFO0UFdPcNKYCkbSQc9+OD+VL5QwkZ4T2pyihRj4ZG8LSAFDsccjPf8AWlDACiQojI/PPvmnqKPkUNJYSkYClAZz39aRUdBGOwwQBjjnvT1FAN+UPekSwlOduE5JJwMZJ7mnaKAbLWUbd5Az6cGsRHRgA4ODu7evvT1FPWx62NKjoUQVAEg7gccg+9IWBjG4jPJxwSfenqKEowLYIAOD78UimUkHnv78805RQvUb8obgc5/H0/D2rH4dPJCiCRg//f409RQlLqNpaSlQVgcZPb196coooUKKKKA//9k=" alt="Sunvone Logo">
+  </div>
+
+  <!-- TITLE -->
+  <div class="title">BERITA ACARA SERAH TERIMA (BAST)</div>
+
+  <!-- DATE -->
+  <div class="date-line">
+    Pada hari ini&nbsp;
+    <input class="inp-hari" type="text" id="d-hari" placeholder="________">&nbsp;tanggal&nbsp;
+    <input type="date" id="d-date" onchange="autoDate(this)">&nbsp;, yang bertanda tangan di bawah ini :
+  </div>
+
+  <!-- PIHAK 1 -->
+  <div class="party">
+    <table>
+      <tr><td>I.&nbsp;&nbsp;Nama</td><td>:</td><td>M. Bagus Pribadi</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Jabatan</td><td>:</td><td>Network Engineer</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Perusahaan</td><td>:</td><td>PT. Sunvone Communication Network</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Alamat</td><td>:</td><td>Plaza Sentral Lt.21, Jl. Jenderal Sudirman Kav.47, Jakarta Selatan</td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;Telp/HP</td><td>:</td><td>021 2977 2999</td></tr>
+    </table>
+    <div class="party-title">Selanjutnya disebut sebagai PIHAK PERTAMA</div>
+  </div>
+
+  <!-- PIHAK 2 -->
+  <div class="party">
+    <table>
+      <tr>
+        <td>II.&nbsp;Nama</td><td>:</td>
+        <td><input type="text" id="p2-nama" data-req="1" placeholder="Nama lengkap" oninput="syncSigName(1,this.value)"></td>
+      </tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Jabatan</td><td>:</td><td><input type="text" id="p2-jabatan" data-req="1" placeholder="Jabatan"></td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Nama Tenant</td><td>:</td><td><input type="text" id="p2-tenant" data-req="1" placeholder="Nama perusahaan/tenant"></td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Alamat</td><td>:</td><td><input type="text" id="p2-alamat" data-req="1" placeholder="Alamat lengkap" style="width:340px"></td></tr>
+      <tr><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Telp/HP</td><td>:</td><td>
+        <input type="text" id="p2-telp" placeholder="No. Telp" style="width:125px"> / 
+        <input type="text" id="p2-hp"   placeholder="No. HP"   style="width:125px">
+      </td></tr>
+    </table>
+    <div class="party-title">Selanjutnya disebut sebagai PIHAK KEDUA</div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section">
+    <p>1.&nbsp;&nbsp;<strong>PIHAK PERTAMA</strong> telah menyerahkan dengan baik hasil pekerjaan kepada <strong>PIHAK KEDUA</strong>, dan <strong>PIHAK KEDUA</strong> telah menerima dengan baik hasil pekerjaan pelaksanaan :</p>
+    <div class="service-options" style="margin-top:3px;">
+      <label><input type="checkbox" id="chk-dedicated"> Dedicated/Broadband</label>
+      <input class="inp-mbps" type="text" id="mbps-dedicated" placeholder="__"> Mbps
+      <label><input type="checkbox" id="chk-metro"> Metro E</label>
+      <input class="inp-mbps" type="text" id="mbps-metro" placeholder="__"> Mbps
+      <label><input type="checkbox" id="chk-upgrade"> Upgrade</label>
+      <input class="inp-mbps" type="text" id="mbps-from" placeholder="__"> Mbps to
+      <input class="inp-mbps" type="text" id="mbps-to" placeholder="__"> Mbps
+      <label><input type="checkbox" id="chk-other"></label>
+      <input type="text" id="other-service" placeholder="_______________"
+        style="width:110px;border:none;border-bottom:1px solid #000;outline:none;font-family:'Times New Roman',serif;font-size:11.5pt;background:transparent;">
+    </div>
+    <div class="coret-note">*coret yang tidak perlu</div>
+    <div class="location-line">
+      yang berlokasi&nbsp;
+      <input type="text" id="lokasi" data-req="1" placeholder="________________________________">
+      &nbsp;pada tanggal&nbsp;
+      <input class="inp-tgl2" type="text" id="tgl2" placeholder="__">&nbsp;Bulan&nbsp;
+      <input class="inp-bln2" type="text" id="bln2" placeholder="______">&nbsp;Tahun 20<input class="inp-thn2" type="text" id="thn2" placeholder="__">.
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section">
+    <p>2.&nbsp;&nbsp;Hasil pekerjaan yang diserah terimakan dari <strong>PIHAK PERTAMA</strong> kepada <strong>PIHAK KEDUA</strong> Berupa daftar barang matrial yang terpasang.</p>
+  </div>
+
+  <p style="margin-bottom:1.5mm;">Demikian Berita Acara Serah Terima Pekerjaan ini dibuat untuk dipergunakan sebagaimana mestinya.</p>
+
+  <!-- DAFTAR BARANG -->
+  <div class="table-title">Daftar Barang</div>
+  <table class="barang" id="barangTable">
+    <thead>
+      <tr>
+        <th style="width:36px;">No</th>
+        <th>Nama Barang</th>
+        <th style="width:65px;">Jumlah</th>
+        <th style="width:115px;">S/N</th>
+        <th>Keterangan</th>
+        <th style="width:28px;" class="no-print"></th>
+      </tr>
+    </thead>
+    <tbody id="barangBody"></tbody>
+  </table>
+  <button class="add-row-btn" onclick="addRow()">+ Tambah Baris</button>
+
+  <!-- SIGNATURES -->
+  <div class="sig-section">
+    <!-- Pihak 1 -->
+    <div class="sig-block">
+      <div class="sig-label">Pihak Pertama</div>
+      <div class="sig-company">PT Sunvone Communication Network</div>
+      <div class="sig-canvas-wrap" id="wrap0" onclick="openZoom(0)">
+        <canvas id="sig0"></canvas>
+        <div class="sig-placeholder" id="ph0">Ketuk untuk tanda tangan</div>
+      </div>
+      <div class="sig-btns">
+        <button class="sig-btn btn-undo"  onclick="undoSig(0)">↩ Undo</button>
+        <button class="sig-btn btn-clear" onclick="clearSig(0)">✕ Hapus</button>
+      </div>
+      <input class="sig-name-input" id="sn0" value="M. Bagus Pribadi" readonly>
+    </div>
+
+    <!-- Pihak 2 -->
+    <div class="sig-block">
+      <div class="sig-label">Pihak Kedua</div>
+      <div class="sig-company">&nbsp;</div>
+      <div class="sig-canvas-wrap" id="wrap1" onclick="openZoom(1)">
+        <canvas id="sig1"></canvas>
+        <div class="sig-placeholder" id="ph1">Ketuk untuk tanda tangan</div>
+      </div>
+      <div class="sig-btns">
+        <button class="sig-btn btn-undo"  onclick="undoSig(1)">↩ Undo</button>
+        <button class="sig-btn btn-clear" onclick="clearSig(1)">✕ Hapus</button>
+      </div>
+      <input class="sig-name-input" id="sn1" placeholder="Nama penandatangan">
+    </div>
+
+    <!-- Mengetahui -->
+    <div class="sig-block">
+      <div class="sig-label">Mengetahui</div>
+      <div class="sig-company">PT Detik Ini Juga</div>
+      <div class="sig-canvas-wrap" id="wrap2" onclick="openZoom(2)">
+        <canvas id="sig2"></canvas>
+        <div class="sig-placeholder" id="ph2">Ketuk untuk tanda tangan</div>
+      </div>
+      <div class="sig-btns">
+        <button class="sig-btn btn-undo"  onclick="undoSig(2)">↩ Undo</button>
+        <button class="sig-btn btn-clear" onclick="clearSig(2)">✕ Hapus</button>
+      </div>
+      <input class="sig-name-input" id="sn2" placeholder="Nama penandatangan">
+    </div>
+  </div>
+</div>
+
+<!-- ZOOM MODAL -->
+<div class="sig-modal-bg" id="sigModal">
+  <div class="sig-modal">
+    <h3 id="modalTitle">✍️ Tanda Tangan</h3>
+    <div class="sig-modal-canvas-wrap" id="modalWrap">
+      <canvas id="modalCanvas"></canvas>
+      <div class="sig-modal-placeholder" id="modalPH">Tanda tangan di sini...</div>
+    </div>
+    <div class="sig-modal-actions">
+      <button class="btn-modal-ok"     onclick="applyZoom()">✓ Simpan</button>
+      <button class="btn-modal-undo"   onclick="undoModal()">↩ Undo</button>
+      <button class="btn-modal-clear"  onclick="clearModal()">✕ Hapus</button>
+      <button class="btn-modal-cancel" onclick="closeModal()">Batal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// LOGO embed (will be replaced)
+// ============================================================
+// (already embedded in img src)
+
+// ============================================================
+// SIGNATURE ENGINE
+// ============================================================
+const sigStrokes = [[],[],[]]; // array of strokes per pad, each stroke = [{x,y}]
+let activeZoomIdx = -1;
+let modalStrokes  = [];
+
+function initSmallPad(idx) {
+  const wrap   = document.getElementById('wrap' + idx);
+  const canvas = document.getElementById('sig' + idx);
+  canvas.width  = wrap.offsetWidth  || 160;
+  canvas.height = wrap.offsetHeight || 60;
+}
+
+function redrawPad(idx) {
+  const canvas = document.getElementById('sig' + idx);
+  const ctx    = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawStrokes(ctx, sigStrokes[idx]);
+  document.getElementById('ph'+idx).style.display =
+    sigStrokes[idx].length === 0 ? 'block' : 'none';
+}
+
+function drawStrokes(ctx, strokes) {
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth   = 2;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  strokes.forEach(pts => {
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.stroke();
+  });
+}
+
+function clearSig(idx) {
+  sigStrokes[idx] = [];
+  redrawPad(idx);
+}
+function undoSig(idx) {
+  sigStrokes[idx].pop();
+  redrawPad(idx);
+}
+
+// ---- ZOOM MODAL ----
+let modalDrawing = false;
+let modalCurrentStroke = [];
+
+function openZoom(idx) {
+  activeZoomIdx = idx;
+  modalStrokes  = JSON.parse(JSON.stringify(sigStrokes[idx]));
+  modalCurrentStroke = [];
+
+  const titles = ['Pihak Pertama', 'Pihak Kedua', 'Mengetahui'];
+  document.getElementById('modalTitle').textContent = '✍️ Tanda Tangan — ' + titles[idx];
+
+  const modal  = document.getElementById('sigModal');
+  const wrap   = document.getElementById('modalWrap');
+  const canvas = document.getElementById('modalCanvas');
+  modal.classList.add('open');
+
+  setTimeout(() => {
+    canvas.width  = wrap.offsetWidth;
+    canvas.height = wrap.offsetHeight;
+    redrawModal();
+  }, 20);
+}
+
+function redrawModal() {
+  const canvas = document.getElementById('modalCanvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawStrokes(ctx, modalStrokes);
+  document.getElementById('modalPH').style.display =
+    modalStrokes.length === 0 ? 'block' : 'none';
+}
+
+function getModalPos(e) {
+  const canvas = document.getElementById('modalCanvas');
+  const rect   = canvas.getBoundingClientRect();
+  const scaleX = canvas.width  / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const src    = e.touches ? e.touches[0] : e;
+  return {
+    x: (src.clientX - rect.left) * scaleX,
+    y: (src.clientY - rect.top)  * scaleY
+  };
+}
+
+function modalStart(e) {
+  e.preventDefault();
+  modalDrawing = true;
+  modalCurrentStroke = [getModalPos(e)];
+  document.getElementById('modalPH').style.display = 'none';
+}
+function modalMove(e) {
+  if (!modalDrawing) return;
+  e.preventDefault();
+  const p = getModalPos(e);
+  modalCurrentStroke.push(p);
+
+  const canvas = document.getElementById('modalCanvas');
+  const ctx    = canvas.getContext('2d');
+  const pts    = modalCurrentStroke;
+  if (pts.length < 2) return;
+  ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[pts.length-2].x, pts[pts.length-2].y);
+  ctx.lineTo(p.x, p.y);
+  ctx.stroke();
+}
+function modalEnd(e) {
+  if (!modalDrawing) return;
+  modalDrawing = false;
+  if (modalCurrentStroke.length > 0) {
+    modalStrokes.push([...modalCurrentStroke]);
+    modalCurrentStroke = [];
+  }
+}
+
+(function() {
+  const mc = document.getElementById('modalCanvas');
+  mc.addEventListener('mousedown', modalStart);
+  mc.addEventListener('mousemove', modalMove);
+  mc.addEventListener('mouseup',   modalEnd);
+  mc.addEventListener('mouseleave',modalEnd);
+  mc.addEventListener('touchstart',modalStart,{passive:false});
+  mc.addEventListener('touchmove', modalMove, {passive:false});
+  mc.addEventListener('touchend',  modalEnd);
+})();
+
+function undoModal()  { modalStrokes.pop(); redrawModal(); }
+function clearModal() { modalStrokes = []; redrawModal(); }
+
+function applyZoom() {
+  if (activeZoomIdx < 0) return;
+  sigStrokes[activeZoomIdx] = JSON.parse(JSON.stringify(modalStrokes));
+
+  // Scale down to small canvas
+  const smallCanvas = document.getElementById('sig' + activeZoomIdx);
+  const modalCanvas = document.getElementById('modalCanvas');
+  const sw = smallCanvas.width, sh = smallCanvas.height;
+  const mw = modalCanvas.width, mh = modalCanvas.height;
+  const scaleX = sw/mw, scaleY = sh/mh;
+
+  sigStrokes[activeZoomIdx] = sigStrokes[activeZoomIdx].map(stroke =>
+    stroke.map(p => ({ x: p.x*scaleX, y: p.y*scaleY }))
+  );
+  redrawPad(activeZoomIdx);
+  closeModal();
+}
+
+function closeModal() {
+  document.getElementById('sigModal').classList.remove('open');
+  activeZoomIdx = -1;
+}
+
+// ============================================================
+// DATE PICKER HELPER
+// ============================================================
+const DAYS_ID  = ['','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+const MONTHS_ID = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function autoDate(input) {
+  const d = new Date(input.value + 'T00:00:00');
+  if (isNaN(d)) return;
+  const day = d.getDay(); // 0=Sun
+  const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  document.getElementById('d-hari').value = dayNames[day];
+
+  const tgl2 = String(d.getDate()).padStart(2,'0');
+  const bln2 = MONTHS_ID[d.getMonth()+1];
+  const thn2 = String(d.getFullYear()).slice(-2);
+  document.getElementById('tgl2').value = tgl2;
+  document.getElementById('bln2').value = bln2;
+  document.getElementById('thn2').value = thn2;
+}
+
+// ============================================================
+// DAFTAR BARANG
+// ============================================================
+let rowCount = 0;
+function addRow(nama='',jumlah='',sn='',ket='') {
+  rowCount++;
+  const tbody = document.getElementById('barangBody');
+  const tr = document.createElement('tr');
+  tr.dataset.row = rowCount;
+  tr.innerHTML = `
+    <td>${rowCount}</td>
+    <td><input type="text" value="${nama}"></td>
+    <td><input type="text" value="${jumlah}"></td>
+    <td><input type="text" value="${sn}"></td>
+    <td><input type="text" value="${ket}"></td>
+    <td class="no-print"><button class="del-btn" onclick="delRow(this)" title="Hapus baris">✕</button></td>`;
+  tbody.appendChild(tr);
+}
+function delRow(btn) {
+  btn.closest('tr').remove();
+  renumberRows();
+}
+function renumberRows() {
+  document.querySelectorAll('#barangBody tr').forEach((tr,i) => {
+    tr.cells[0].textContent = i+1;
+  });
+  rowCount = document.querySelectorAll('#barangBody tr').length;
+}
+
+// Init 3 rows
+addRow(); addRow(); addRow();
+
+// ============================================================
+// SYNC SIG NAME
+// ============================================================
+function syncSigName(idx, val) {
+  document.getElementById('sn'+idx).value = val;
+}
+
+// ============================================================
+// WATERMARK
+// ============================================================
+function toggleDraft(cb) {
+  const wm = document.getElementById('watermark');
+  wm.style.display = cb.checked ? 'block' : 'none';
+}
+
+// ============================================================
+// VALIDATION
+// ============================================================
+function validateForm() {
+  let ok = true;
+  document.querySelectorAll('[data-req]').forEach(el => {
+    el.classList.remove('invalid');
+    if (!el.value.trim()) {
+      el.classList.add('invalid');
+      ok = false;
+    }
+  });
+  if (!ok) alert('⚠️ Ada field wajib yang belum diisi (ditandai merah)!');
+  return ok;
+}
+
+// ============================================================
+// SAVE / LOAD (localStorage)
+// ============================================================
+function collectData() {
+  const ids = ['d-hari','d-date','p2-nama','p2-jabatan','p2-tenant',
+                'p2-alamat','p2-telp','p2-hp',
+                'mbps-dedicated','mbps-metro','mbps-from','mbps-to',
+                'other-service','lokasi','tgl2','bln2','thn2','sn0','sn1','sn2'];
+  const fields = {};
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) fields[id] = el.value;
+  });
+
+  const chks = ['chk-dedicated','chk-metro','chk-upgrade','chk-other'];
+  chks.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) fields[id] = el.checked;
+  });
+
+  // Table rows
+  const rows = [];
+  document.querySelectorAll('#barangBody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    rows.push([...inputs].map(i => i.value));
+  });
+
+  // Signatures as dataURL
+  const sigs = [0,1,2].map(idx => {
+    const c = document.getElementById('sig'+idx);
+    return c.toDataURL();
+  });
+
+  return { fields, rows, sigs, sigStrokes };
+}
+
+function saveData() {
+  try {
+    const data = collectData();
+    localStorage.setItem('bast_data', JSON.stringify(data));
+    const ts = new Date().toLocaleString('id-ID');
+    alert('✅ Data berhasil disimpan!\n' + ts);
+  } catch(e) {
+    alert('❌ Gagal simpan: ' + e.message);
+  }
+}
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem('bast_data');
+    if (!raw) { alert('Tidak ada data tersimpan.'); return; }
+    if (!confirm('Muat data tersimpan? Data saat ini akan ditimpa.')) return;
+    const data = JSON.parse(raw);
+
+    // Fields
+    Object.entries(data.fields).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') el.checked = val;
+      else el.value = val;
+    });
+
+    // Rows
+    document.getElementById('barangBody').innerHTML = '';
+    rowCount = 0;
+    data.rows.forEach(r => addRow(r[0]||'',r[1]||'',r[2]||'',r[3]||''));
+
+    // Sigs
+    if (data.sigStrokes) {
+      [0,1,2].forEach(idx => {
+        sigStrokes[idx] = data.sigStrokes[idx] || [];
+        redrawPad(idx);
+      });
+    } else if (data.sigs) {
+      data.sigs.forEach((url, idx) => {
+        const img = new Image();
+        img.onload = () => {
+          const c   = document.getElementById('sig'+idx);
+          const ctx = c.getContext('2d');
+          ctx.clearRect(0,0,c.width,c.height);
+          ctx.drawImage(img,0,0,c.width,c.height);
+          document.getElementById('ph'+idx).style.display = 'none';
+        };
+        img.src = url;
+      });
+    }
+
+    alert('✅ Data berhasil dimuat!');
+  } catch(e) {
+    alert('❌ Gagal muat: ' + e.message);
+  }
+}
+
+// Auto-load on start
+window.addEventListener('load', () => {
+  [0,1,2].forEach(i => initSmallPad(i));
+  const raw = localStorage.getItem('bast_data');
+  if (raw) {
+    if (confirm('Ditemukan data tersimpan. Muat otomatis?')) loadData();
+  }
+});
+
+// ============================================================
+// EXPORT PDF
+// ============================================================
+function exportPDF() {
+  if (!validateForm()) return;
+
+  // Hide watermark
+  const wm = document.getElementById('watermark');
+  const wmWasVisible = wm.style.display !== 'none';
+  wm.style.display = 'none';
+
+  // Hide buttons/UI elements
+  const btns = document.querySelectorAll('.sig-btns, .add-row-btn, .del-btn, .no-print');
+  btns.forEach(b => b.style.display = 'none');
+
+  // Clean up signature areas: remove dashed border, bg, placeholder text
+  const sigWraps = document.querySelectorAll('.sig-canvas-wrap');
+  sigWraps.forEach(w => {
+    w.style.border = 'none';
+    w.style.background = 'transparent';
+  });
+  const sigPHs = document.querySelectorAll('.sig-placeholder');
+  sigPHs.forEach(p => p.style.display = 'none');
+
+  const el = document.getElementById('bast-page');
+  const opt = {
+    margin:       0,
+    filename:     'BAST_Sunvone.pdf',
+    image:        { type:'jpeg', quality:0.98 },
+    html2canvas:  { scale:2, useCORS:true },
+    jsPDF:        { unit:'mm', format:'a4', orientation:'portrait' }
+  };
+
+  html2pdf().set(opt).from(el).save().then(() => {
+    // Restore everything
+    btns.forEach(b => b.style.display = '');
+    sigWraps.forEach(w => {
+      w.style.border = '1px dashed #aaa';
+      w.style.background = '#fafafa';
+    });
+    sigPHs.forEach((p, i) => {
+      const idx = parseInt(p.id.replace('ph',''));
+      p.style.display = sigStrokes[idx] && sigStrokes[idx].length > 0 ? 'none' : 'block';
+    });
+    if (wmWasVisible) wm.style.display = 'block';
+  });
+}
+
+// ============================================================
+// RESET
+// ============================================================
+function resetAll() {
+  if (!confirm('Reset semua isian form? Data yang belum disimpan akan hilang.')) return;
+  const ids = ['d-hari','d-date','p2-nama','p2-jabatan','p2-tenant',
+                'p2-alamat','p2-telp','p2-hp',
+                'mbps-dedicated','mbps-metro','mbps-from','mbps-to',
+                'other-service','lokasi','tgl2','bln2','thn2','sn1','sn2'];
+  ids.forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  ['chk-dedicated','chk-metro','chk-upgrade','chk-other'].forEach(id => {
+    const e=document.getElementById(id); if(e) e.checked=false;
+  });
+  document.getElementById('barangBody').innerHTML='';
+  rowCount=0;
+  addRow(); addRow(); addRow();
+  [0,1,2].forEach(i => clearSig(i));
+  document.getElementById('sn0').value = 'M. Bagus Pribadi';
+}
+</script>
+</body>
+</html>

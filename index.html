@@ -217,23 +217,28 @@ table.barang tr.del-row td:last-child { padding:0; }
 
 /* ===== SIGNATURES ===== */
 .sig-section {
-  display:flex; justify-content:space-between;
-  align-items:flex-start;
-  margin-top:3mm; gap:8px;
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  margin-top:3mm;
+  gap:6px;
+  width:100%;
 }
-.sig-block { flex:1; min-width:0; text-align:center; }
-.sig-label  { font-weight:bold; margin-bottom:.5mm; font-size:11pt; }
-.sig-company { font-size:9.5pt; margin-bottom:1mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sig-block { text-align:center; min-width:0; }
+.sig-label  { font-weight:bold; margin-bottom:.5mm; font-size:11pt; display:block; }
+.sig-company { font-size:9pt; margin-bottom:1mm; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .sig-canvas-wrap {
   position:relative;
   border:1px dashed #aaa;
   margin:0 auto 1mm auto;
   background:#fafafa;
-  width:100%; height:60px;
+  width:100%;
+  height:60px;
+  min-height:60px;
   cursor:crosshair;
   touch-action: none;
   box-sizing:border-box;
+  display:block;
 }
 .sig-canvas-wrap canvas {
   position:absolute; top:0; left:0; width:100%; height:100%;
@@ -244,7 +249,7 @@ table.barang tr.del-row td:last-child { padding:0; }
   color:#ccc; font-size:9pt; font-style:italic;
   pointer-events:none; white-space:nowrap;
 }
-.sig-btns { display:flex; gap:4px; justify-content:center; margin-bottom:1mm; }
+.sig-btns { display:flex; gap:4px; justify-content:center; margin-bottom:1mm; flex-wrap:nowrap; }
 .sig-btn {
   font-size:10px; padding:2px 7px;
   border:none; border-radius:2px;
@@ -257,8 +262,10 @@ table.barang tr.del-row td:last-child { padding:0; }
   border:none; border-bottom:1px solid #000;
   outline:none; text-align:center;
   font-family:'Times New Roman',Times,serif;
-  font-size:11pt; background:transparent;
-  width:90%; margin-top:1mm;
+  font-size:10.5pt; background:transparent;
+  width:100%; margin-top:1mm;
+  box-sizing:border-box;
+  display:block;
 }
 
 /* ===== ZOOM MODAL for signature ===== */
@@ -484,6 +491,13 @@ table.barang tr.del-row td:last-child { padding:0; }
       </div>
       <input class="sig-name-input" id="sn2" placeholder="Nama penandatangan">
     </div>
+
+  <!-- DISCLAIMER NOTE -->
+  <div style="margin-top:5mm; border-top:1px solid #bbb; padding-top:2.5mm; clear:both;">
+    <p style="font-style:italic; font-size:8.5pt; color:#555; text-align:justify; line-height:1.55;">
+      * PT Sunvone Communication Network bertanggung jawab atas layanan internet dan perangkat modem/CPE yang terpasang. Permasalahan pada perangkat internal pelanggan di luar titik terminasi tidak termasuk dalam cakupan tanggung jawab PT Sunvone Communication Network.
+    </p>
+  </div>
   </div>
 </div>
 

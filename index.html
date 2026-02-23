@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAST - PT Sunvone</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -216,43 +215,7 @@ table.barang tr.del-row td:last-child { padding:0; }
 }
 .add-row-btn:hover { opacity:.8; }
 
-/* ===== QR CODE AREA ===== */
-.bottom-row {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 8mm;
-  margin-top: 4mm;
-  border-top: 1px solid #bbb;
-  padding-top: 2.5mm;
-}
-.disclaimer-text {
-  flex: 1;
-  font-style: italic;
-  font-size: 8.5pt;
-  color: #555;
-  text-align: justify;
-  line-height: 1.55;
-}
-.qr-box {
-  flex-shrink: 0;
-  text-align: center;
-  width: 28mm;
-}
-.qr-box canvas,
-.qr-box img {
-  width: 28mm !important;
-  height: 28mm !important;
-  display: block;
-}
-.qr-box-label {
-  font-size: 5.5pt;
-  font-family: Arial, sans-serif;
-  color: #666;
-  margin-top: 1px;
-  display: block;
-  text-align: center;
-}
+
 
 /* ===== SIGNATURES ===== */
 .sig-section {
@@ -918,9 +881,6 @@ function exportPDF() {
   wm.style.display = 'none';
 
   // Hide buttons/UI elements
-  // Auto-generate QR before export
-  generateQR();
-
   const btns = document.querySelectorAll('.sig-btns, .add-row-btn, .del-btn, .no-print');
   btns.forEach(b => b.style.display = 'none');
 
@@ -960,66 +920,7 @@ function exportPDF() {
 // ============================================================
 // QR CODE — auto-generate on export
 // ============================================================
-let qrInstance = null;
 
-function buildQRText() {
-  const get = id => (document.getElementById(id)||{}).value || '-';
-  const nama    = get('p2-nama');
-  const jabatan = get('p2-jabatan');
-  const tenant  = get('p2-tenant');
-  const alamat  = get('p2-alamat');
-  const telp    = get('p2-telp');
-  const hp      = get('p2-hp');
-  const lokasi  = get('lokasi');
-  const tgl     = (get('tgl2') + ' ' + get('bln2') + ' 20' + get('thn2')).trim();
-
-  const svcs = [];
-  if (document.getElementById('chk-dedicated').checked)
-    svcs.push('Dedicated ' + get('mbps-dedicated') + ' Mbps');
-  if (document.getElementById('chk-metro').checked)
-    svcs.push('Metro E ' + get('mbps-metro') + ' Mbps');
-  if (document.getElementById('chk-upgrade').checked)
-    svcs.push('Upgrade ' + get('mbps-from') + '->' + get('mbps-to') + ' Mbps');
-  if (document.getElementById('chk-other').checked)
-    svcs.push(get('other-service'));
-
-  const barangLines = [];
-  document.querySelectorAll('#barangBody tr').forEach((tr,i) => {
-    const inp = tr.querySelectorAll('td input[type=text]');
-    const v   = [...inp].map(x => x.value.trim());
-    if (v[0]) barangLines.push((i+1)+'. '+v[0]+' x'+v[1]+' SN:'+v[2]);
-  });
-
-  return [
-    'BAST - PT SUNVONE',
-    'Pelanggan : ' + nama,
-    'Jabatan   : ' + jabatan,
-    'Tenant    : ' + tenant,
-    'Alamat    : ' + alamat,
-    'Telp      : ' + telp + ' / ' + hp,
-    'Lokasi    : ' + lokasi,
-    'Tgl Pasang: ' + tgl,
-    'Paket     : ' + (svcs.join(', ') || '-'),
-    'Barang    :',
-    ...barangLines
-  ].join('\n');
-}
-
-function generateQR() {
-  const el = document.getElementById('qrcode');
-  el.innerHTML = '';
-  qrInstance = null;
-  const text = buildQRText();
-  try {
-    qrInstance = new QRCode(el, {
-      text:         text,
-      width:        106,
-      height:       106,
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  } catch(e) {
-    el.innerHTML = '<span style="font-size:7px;color:red;">Data terlalu panjang</span>';
-  }
 }
 
 // ============================================================
@@ -1040,7 +941,6 @@ function resetAll() {
   addRow(); addRow(); addRow();
   [0,1,2].forEach(i => clearSig(i));
   document.getElementById('sn0').value = 'M. Bagus Pribadi';
-  document.getElementById('qrcode').innerHTML = '';
 }
 </script>
 </body>

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BAST - PT Sunvone</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -214,6 +215,44 @@ table.barang tr.del-row td:last-child { padding:0; }
   font-family:Arial,sans-serif;
 }
 .add-row-btn:hover { opacity:.8; }
+
+/* ===== QR CODE AREA ===== */
+.bottom-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8mm;
+  margin-top: 4mm;
+  border-top: 1px solid #bbb;
+  padding-top: 2.5mm;
+}
+.disclaimer-text {
+  flex: 1;
+  font-style: italic;
+  font-size: 8.5pt;
+  color: #555;
+  text-align: justify;
+  line-height: 1.55;
+}
+.qr-box {
+  flex-shrink: 0;
+  text-align: center;
+  width: 28mm;
+}
+.qr-box canvas,
+.qr-box img {
+  width: 28mm !important;
+  height: 28mm !important;
+  display: block;
+}
+.qr-box-label {
+  font-size: 5.5pt;
+  font-family: Arial, sans-serif;
+  color: #666;
+  margin-top: 1px;
+  display: block;
+  text-align: center;
+}
 
 /* ===== SIGNATURES ===== */
 .sig-section {
@@ -489,14 +528,13 @@ table.barang tr.del-row td:last-child { padding:0; }
         <button class="sig-btn btn-undo"  onclick="undoSig(2)">↩ Undo</button>
         <button class="sig-btn btn-clear" onclick="clearSig(2)">✕ Hapus</button>
       </div>
-      <input class="sig-name-input" id="sn2" placeholder="Nama penandatangan">
+      <input class="sig-name-input" id="sn2" value="Audi Ramadhan">
     </div>
+  </div><!-- end sig-section -->
 
-  <!-- DISCLAIMER NOTE -->
-  <div style="margin-top:5mm; border-top:1px solid #bbb; padding-top:2.5mm; clear:both;">
-    <p style="font-style:italic; font-size:8.5pt; color:#555; text-align:justify; line-height:1.55;">
-      * PT Sunvone Communication Network bertanggung jawab atas layanan internet dan perangkat modem/CPE yang terpasang. Permasalahan pada perangkat internal pelanggan di luar titik terminasi tidak termasuk dalam cakupan tanggung jawab PT Sunvone Communication Network.
-    </p>
+  <!-- DISCLAIMER -->
+  <div style="margin-top:2mm; border-top:1px solid #bbb; padding-top:1mm;">
+    <p style="font-style:italic; font-size:7pt; color:#777; line-height:1.3;">* Tanggung jawab PT Sunvone Communication Network terbatas pada layanan internet dan perangkat modem/CPE yang terpasang. Permasalahan pada perangkat internal pelanggan di luar titik terminasi bukan tanggung jawab kami.</p>
   </div>
   </div>
 </div>
@@ -515,7 +553,6 @@ table.barang tr.del-row td:last-child { padding:0; }
       <button class="btn-modal-clear"  onclick="clearModal()">✕ Hapus</button>
       <button class="btn-modal-cancel" onclick="closeModal()">Batal</button>
     </div>
-  </div>
 </div>
 
 <script>
@@ -711,11 +748,12 @@ function autoDate(input) {
 let rowCount = 0;
 function addRow(nama='',jumlah='',sn='',ket='') {
   rowCount++;
+  const id = rowCount;
   const tbody = document.getElementById('barangBody');
   const tr = document.createElement('tr');
-  tr.dataset.row = rowCount;
+  tr.dataset.row = id;
   tr.innerHTML = `
-    <td>${rowCount}</td>
+    <td>${id}</td>
     <td><input type="text" value="${nama}"></td>
     <td><input type="text" value="${jumlah}"></td>
     <td><input type="text" value="${sn}"></td>
@@ -882,6 +920,9 @@ function exportPDF() {
   wm.style.display = 'none';
 
   // Hide buttons/UI elements
+  // Auto-generate QR before export
+  generateQR();
+
   const btns = document.querySelectorAll('.sig-btns, .add-row-btn, .del-btn, .no-print');
   btns.forEach(b => b.style.display = 'none');
 
@@ -919,6 +960,71 @@ function exportPDF() {
 }
 
 // ============================================================
+// QR CODE — auto-generate on export
+// ============================================================
+let qrInstance = null;
+
+function buildQRText() {
+  const get = id => (document.getElementById(id)||{}).value || '-';
+  const nama    = get('p2-nama');
+  const jabatan = get('p2-jabatan');
+  const tenant  = get('p2-tenant');
+  const alamat  = get('p2-alamat');
+  const telp    = get('p2-telp');
+  const hp      = get('p2-hp');
+  const lokasi  = get('lokasi');
+  const tgl     = (get('tgl2') + ' ' + get('bln2') + ' 20' + get('thn2')).trim();
+
+  const svcs = [];
+  if (document.getElementById('chk-dedicated').checked)
+    svcs.push('Dedicated ' + get('mbps-dedicated') + ' Mbps');
+  if (document.getElementById('chk-metro').checked)
+    svcs.push('Metro E ' + get('mbps-metro') + ' Mbps');
+  if (document.getElementById('chk-upgrade').checked)
+    svcs.push('Upgrade ' + get('mbps-from') + '->' + get('mbps-to') + ' Mbps');
+  if (document.getElementById('chk-other').checked)
+    svcs.push(get('other-service'));
+
+  const barangLines = [];
+  document.querySelectorAll('#barangBody tr').forEach((tr,i) => {
+    const inp = tr.querySelectorAll('td input[type=text]');
+    const v   = [...inp].map(x => x.value.trim());
+    if (v[0]) barangLines.push((i+1)+'. '+v[0]+' x'+v[1]+' SN:'+v[2]);
+  });
+
+  return [
+    'BAST - PT SUNVONE',
+    'Pelanggan : ' + nama,
+    'Jabatan   : ' + jabatan,
+    'Tenant    : ' + tenant,
+    'Alamat    : ' + alamat,
+    'Telp      : ' + telp + ' / ' + hp,
+    'Lokasi    : ' + lokasi,
+    'Tgl Pasang: ' + tgl,
+    'Paket     : ' + (svcs.join(', ') || '-'),
+    'Barang    :',
+    ...barangLines
+  ].join('\n');
+}
+
+function generateQR() {
+  const el = document.getElementById('qrcode');
+  el.innerHTML = '';
+  qrInstance = null;
+  const text = buildQRText();
+  try {
+    qrInstance = new QRCode(el, {
+      text:         text,
+      width:        106,
+      height:       106,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch(e) {
+    el.innerHTML = '<span style="font-size:7px;color:red;">Data terlalu panjang</span>';
+  }
+}
+
+// ============================================================
 // RESET
 // ============================================================
 function resetAll() {
@@ -936,6 +1042,7 @@ function resetAll() {
   addRow(); addRow(); addRow();
   [0,1,2].forEach(i => clearSig(i));
   document.getElementById('sn0').value = 'M. Bagus Pribadi';
+  document.getElementById('qrcode').innerHTML = '';
 }
 </script>
 </body>

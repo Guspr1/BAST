@@ -624,63 +624,71 @@ function loadData() {
 function exportPDF() {
   if (!validate()) return;
 
-  // --- STEP 1: Hide UI elements ---
-  document.getElementById('watermark').style.display = 'none';
-  const btns = document.querySelectorAll('.sig-btns, .add-row-btn, .del-btn');
-  btns.forEach(b => b.style.display = 'none');
-  document.querySelectorAll('thead th:last-child, tbody td:last-child').forEach(td => td.style.display='none');
-  const wraps = document.querySelectorAll('.sig-wrap');
-  wraps.forEach(w => { w.style.border='none'; w.style.background='transparent'; });
-  document.querySelectorAll('.sig-ph').forEach(p => p.style.display='none');
-
-  // --- STEP 2: Replace all inputs with styled spans ---
   const page = document.getElementById('bast-page');
-  const allInputs = page.querySelectorAll('input[type="text"], input[type="date"], input[type="checkbox"]');
-  const replaced = [];
-  allInputs.forEach(inp => {
-    let displayVal = '';
-    if (inp.type === 'checkbox') {
-      // skip — checkboxes render fine
+
+  // Clone the entire page
+  const clone = page.cloneNode(true);
+  clone.style.cssText = 'position:fixed;top:0;left:0;width:210mm;background:white;z-index:-9999;padding:7mm 13mm 6mm 13mm;font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;';
+
+  // Hide watermark in clone
+  const wm = clone.querySelector('#watermark');
+  if (wm) wm.style.display = 'none';
+
+  // In clone: replace every input/date with a span showing its value
+  // We need to get values from ORIGINAL inputs
+  const origInputs = page.querySelectorAll('input');
+  const cloneInputs = clone.querySelectorAll('input');
+  origInputs.forEach((orig, i) => {
+    const ci = cloneInputs[i];
+    if (!ci) return;
+    if (orig.type === 'checkbox') {
+      // keep checkbox as-is
       return;
-    } else {
-      displayVal = inp.value || '';
     }
     const span = document.createElement('span');
-    span.style.cssText = 'font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;display:inline-block;min-width:20px;border-bottom:1px solid #000;padding:0 2px;';
-    // sig-name-inp gets centered
-    if (inp.classList.contains('sig-name-inp')) {
-      span.style.cssText += 'text-align:center;width:100%;';
+    span.style.cssText = 'font-family:"Times New Roman",Times,serif;font-size:11pt;color:#000;display:inline;border-bottom:1px solid #000;padding:0 2px;min-width:10px;';
+    if (ci.classList.contains('sig-name-inp')) {
+      span.style.cssText = 'font-family:"Times New Roman",Times,serif;font-size:10.5pt;color:#000;display:block;text-align:center;border-bottom:1px solid #000;width:100%;box-sizing:border-box;';
     }
-    span.textContent = displayVal;
-    inp.parentNode.insertBefore(span, inp);
-    inp.style.display = 'none';
-    replaced.push({ inp, span });
+    span.textContent = orig.value || '';
+    ci.parentNode.replaceChild(span, ci);
   });
 
-  // --- STEP 3: Export ---
+  // In clone: remove sig-btns, add-row-btn, del-btn, last col
+  clone.querySelectorAll('.sig-btns, .add-row-btn, .del-btn').forEach(el => el.remove());
+  clone.querySelectorAll('thead th:last-child, tbody td:last-child').forEach(el => el.remove());
+
+  // In clone: clean sig-wrap borders
+  clone.querySelectorAll('.sig-wrap').forEach(w => {
+    w.style.border = 'none';
+    w.style.background = 'transparent';
+  });
+  clone.querySelectorAll('.sig-ph').forEach(p => p.remove());
+
+  // Copy canvas (signatures) from original to clone
+  const origCanvases = page.querySelectorAll('canvas');
+  const cloneCanvases = clone.querySelectorAll('canvas');
+  origCanvases.forEach((oc, i) => {
+    const cc = cloneCanvases[i];
+    if (!cc) return;
+    cc.width  = oc.width;
+    cc.height = oc.height;
+    const ctx = cc.getContext('2d');
+    ctx.drawImage(oc, 0, 0);
+  });
+
+  document.body.appendChild(clone);
+
   html2pdf().set({
     margin: 0,
     filename: 'BAST_Sunvone.pdf',
     image: { type:'jpeg', quality:0.98 },
     html2canvas: { scale:2, useCORS:true, logging:false },
     jsPDF: { unit:'mm', format:'a4', orientation:'portrait' }
-  }).from(page).save().then(() => {
-    // --- STEP 4: Restore everything ---
-    replaced.forEach(({ inp, span }) => {
-      inp.style.display = '';
-      span.remove();
-    });
-    if (document.getElementById('draftCheck').checked)
-      document.getElementById('watermark').style.display = 'block';
-    btns.forEach(b => b.style.display = '');
-    document.querySelectorAll('thead th:last-child, tbody td:last-child').forEach(td => td.style.display='');
-    wraps.forEach(w => { w.style.border='1px dashed #aaa'; w.style.background='#fafafa'; });
-    [0,1,2].forEach(i => {
-      document.getElementById('ph'+i).style.display = strokes[i].length ? 'none' : 'block';
-    });
+  }).from(clone).save().then(() => {
+    document.body.removeChild(clone);
   });
 }
-
 // ============================================================
 // RESET
 // ============================================================

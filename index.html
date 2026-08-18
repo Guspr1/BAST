@@ -453,7 +453,7 @@ table.barang td input[type="text"] {
         <button class="sig-btn btn-undo"  onclick="undoSig(2)">&#x21A9; Undo</button>
         <button class="sig-btn btn-clear" onclick="clearSig(2)">&#x2715; Hapus</button>
       </div>
-      <input class="sig-name-input" id="sn2" value="Audi Ramadhan">
+      <input class="sig-name-input" id="sn2" value="">
     </div>
   </div>
 
@@ -722,7 +722,7 @@ function resetAll() {
   addRow(); addRow(); addRow();
   [0,1,2].forEach(i=>clearSig(i));
   document.getElementById('sn0').value='M. Bagus Pribadi';
-  document.getElementById('sn2').value='Audi Ramadhan';
+  document.getElementById('sn2').value='';
   setToday();
 }
 
